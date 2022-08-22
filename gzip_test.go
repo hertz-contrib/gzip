@@ -77,7 +77,7 @@ func TestGzipPNG(t *testing.T) {
 		c.String(200, "this is a PNG!")
 	})
 	request := ut.PerformRequest(router, consts.MethodGet, "/image.png", nil, ut.Header{
-		"Accept-Encoding", "gzip",
+		Key: "Accept-Encoding", Value: "gzip",
 	})
 	w := request.Result()
 	assert.Equal(t, w.StatusCode(), 200)
