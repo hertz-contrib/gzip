@@ -28,7 +28,6 @@ package gzip
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -61,17 +60,12 @@ func (g *gzipHandler) Handle(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 
+	c.Next(ctx)
 	c.Header("Content-Encoding", "gzip")
 	c.Header("Vary", "Accept-Encoding")
-
-	var gBody []byte
-	c.Next(ctx)
-	gzipBytes := compress.AppendGzipBytesLevel(gBody, c.Response.Body(), g.level)
-	reader := bytes.NewReader(gzipBytes)
-	c.Response.SetBodyStream(reader, len(gzipBytes))
-	defer func() {
-		c.Header("Content-Length", fmt.Sprint(len(gzipBytes)))
-	}()
+	var dst []byte
+	gzipBytes := compress.AppendGzipBytesLevel(dst, c.Response.Body(), g.level)
+	c.Response.SetBodyStream(bytes.NewBuffer(gzipBytes), len(gzipBytes))
 }
 
 func (g *gzipHandler) shouldCompress(req *protocol.Request) bool {
