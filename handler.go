@@ -74,7 +74,7 @@ func (g *gzipHandler) shouldCompress(req *protocol.Request) bool {
 		return false
 	}
 
-	path := string(req.URI().Path())
+	path := string(req.URI().RequestURI())
 
 	extension := filepath.Ext(path)
 	if g.ExcludedExtensions.Contains(extension) {
