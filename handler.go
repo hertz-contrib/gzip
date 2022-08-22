@@ -63,8 +63,7 @@ func (g *gzipHandler) Handle(ctx context.Context, c *app.RequestContext) {
 	c.Next(ctx)
 	c.Header("Content-Encoding", "gzip")
 	c.Header("Vary", "Accept-Encoding")
-	var dst []byte
-	gzipBytes := compress.AppendGzipBytesLevel(dst, c.Response.Body(), g.level)
+	gzipBytes := compress.AppendGzipBytesLevel(nil, c.Response.Body(), g.level)
 	c.Response.SetBodyStream(bytes.NewBuffer(gzipBytes), len(gzipBytes))
 }
 
