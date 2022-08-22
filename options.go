@@ -26,7 +26,6 @@
 package gzip
 
 import (
-	"bytes"
 	"context"
 	"net/http"
 	"regexp"
@@ -34,7 +33,6 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/compress"
-	"github.com/cloudwego/hertz/pkg/common/hlog"
 )
 
 var (
@@ -129,20 +127,15 @@ func (e ExcludedPaths) Contains(requestURI string) bool {
 }
 
 func DefaultDecompressHandle(ctx context.Context, c *app.RequestContext) {
-	if c.Request.Body() == nil {
+	if len(c.Request.Body()) <= 0 {
 		return
 	}
-	r, err := compress.AcquireGzipReader(bytes.NewReader(c.Request.Body()))
+	gunzipBytes, err := compress.AppendGunzipBytes(nil, c.Request.Body())
 	if err != nil {
 		_ = c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-	buf := &bytes.Buffer{}
-	_, err = buf.ReadFrom(r)
-	if err != nil {
-		hlog.CtxErrorf(ctx, "buffer read error: %v", err.Error())
-	}
 	c.Request.Header.DelBytes([]byte("Content-Encoding"))
 	c.Request.Header.DelBytes([]byte("Content-Length"))
-	c.Request.SetBody(buf.Bytes())
+	c.Request.SetBody(gunzipBytes)
 }
