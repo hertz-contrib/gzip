@@ -32,7 +32,9 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/common/compress"
+	"github.com/cloudwego/hertz/pkg/protocol"
 )
 
 var (
@@ -46,10 +48,11 @@ var (
 
 type (
 	Options struct {
-		ExcludedExtensions  ExcludedExtensions
-		ExcludedPaths       ExcludedPaths
-		ExcludedPathRegexes ExcludedPathRegexes
-		DecompressFn        app.HandlerFunc
+		ExcludedExtensions    ExcludedExtensions
+		ExcludedPaths         ExcludedPaths
+		ExcludedPathRegexes   ExcludedPathRegexes
+		DecompressFn          app.HandlerFunc
+		DecompressFnForClient client.Middleware
 	}
 	Option              func(*Options)
 	ExcludedExtensions  map[string]bool
@@ -80,6 +83,12 @@ func WithExcludedPaths(args []string) Option {
 func WithDecompressFn(decompressFn app.HandlerFunc) Option {
 	return func(o *Options) {
 		o.DecompressFn = decompressFn
+	}
+}
+
+func WithDecompressFnForClient(decompressFn client.Middleware) Option {
+	return func(o *Options) {
+		o.DecompressFnForClient = decompressFn
 	}
 }
 
@@ -138,4 +147,20 @@ func DefaultDecompressHandle(ctx context.Context, c *app.RequestContext) {
 	c.Request.Header.DelBytes([]byte("Content-Encoding"))
 	c.Request.Header.DelBytes([]byte("Content-Length"))
 	c.Request.SetBody(gunzipBytes)
+}
+
+func DecompressFn4Client(next client.Endpoint) client.Endpoint {
+	return func(ctx context.Context, req *protocol.Request, resp *protocol.Response) (err error) {
+		if len(req.Body()) <= 0 {
+			return
+		}
+		gunzipBytes, err := compress.AppendGunzipBytes(nil, req.Body())
+		if err != nil {
+			return err
+		}
+		req.Header.DelBytes([]byte("Content-Encoding"))
+		req.Header.DelBytes([]byte("Content-Length"))
+		req.SetBody(gunzipBytes)
+		return next(ctx, req, resp)
+	}
 }

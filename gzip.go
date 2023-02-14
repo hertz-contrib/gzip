@@ -29,6 +29,7 @@ import (
 	"compress/gzip"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/client"
 )
 
 const (
@@ -40,4 +41,8 @@ const (
 
 func Gzip(level int, options ...Option) app.HandlerFunc {
 	return newGzipHandler(level, options...).Handle
+}
+
+func GzipForClient(level int, options ...Option) client.Middleware {
+	return newGzipMiddleware(level, options...).Handle
 }

@@ -35,6 +35,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/common/compress"
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/ut"
@@ -188,4 +189,14 @@ func TestDecompressGzipWithIncorrectData(t *testing.T) {
 		ut.Header{Key: "Content-Encoding", Value: "gzip"})
 	w := request.Result()
 	assert.Equal(t, http.StatusBadRequest, w.StatusCode())
+}
+
+func TestGzipForClient(t *testing.T) {
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	// TDOO
+
+	cli.Use(GzipForClient(DefaultCompression, WithDecompressFnForClient(DecompressFn4Client)))
 }
