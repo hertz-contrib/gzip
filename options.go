@@ -154,13 +154,13 @@ func DecompressFn4Client(next client.Endpoint) client.Endpoint {
 		if len(req.Body()) <= 0 {
 			return
 		}
-		gunzipBytes, err := compress.AppendGunzipBytes(nil, req.Body())
+		gunzipBytes, err := compress.AppendGunzipBytes(nil, resp.Body())
 		if err != nil {
 			return err
 		}
-		req.Header.DelBytes([]byte("Content-Encoding"))
-		req.Header.DelBytes([]byte("Content-Length"))
-		req.SetBody(gunzipBytes)
+		resp.Header.DelBytes([]byte("Content-Encoding"))
+		resp.Header.DelBytes([]byte("Content-Length"))
+		resp.SetBody(gunzipBytes)
 		return next(ctx, req, resp)
 	}
 }
