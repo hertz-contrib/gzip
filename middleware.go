@@ -17,17 +17,17 @@ type gzipMiddleware struct {
 }
 
 func newGzipMiddleware(level int, opts ...Option) *gzipMiddleware {
-	handler := &gzipMiddleware{
+	middleware := &gzipMiddleware{
 		Options: DefaultOptions,
 		level:   level,
 	}
 	for _, fn := range opts {
-		fn(handler.Options)
+		fn(middleware.Options)
 	}
-	return handler
+	return middleware
 }
 
-func (g *gzipMiddleware) Handle(next client.Endpoint) client.Endpoint {
+func (g *gzipMiddleware) Middleware(next client.Endpoint) client.Endpoint {
 	return func(ctx context.Context, req *protocol.Request, resp *protocol.Response) (err error) {
 		if fn := g.DecompressFnForClient; fn != nil && req.Header.Get("Content-Encoding") == "gzip" {
 			fn(next)
