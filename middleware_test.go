@@ -26,10 +26,9 @@
 package gzip
 
 import (
-	"compress/gzip"
 	"context"
 	"fmt"
-	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -37,13 +36,16 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/protocol"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGzipForClient(t *testing.T) {
 	h := server.Default(server.WithHostPorts(":2333"))
-	h.Use(Gzip(gzip.DefaultCompression))
+
+	// 会对返回值进行解压
 	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
-		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
+		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
+		c.String(200, testResponse)
 	})
 	go h.Spin()
 	time.Sleep(time.Second)
@@ -52,19 +54,24 @@ func TestGzipForClient(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	/*	cli.Use(GzipForClient(DefaultCompression))*/
-	cli.Use(GzipForClient(DefaultCompression, WithDecompressFnForClient(DefaultDecompressFn4Client)))
+	cli.Use(GzipForClient(DefaultCompression))
+
 	req := protocol.AcquireRequest()
 	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
 	req.SetRequestURI("http://localhost:2333/ping")
+
 	cli.Do(context.Background(), req, res)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
-	/*
-		if g, e := resp.StatusCode(), backendStatus; g != e {
-			t.Errorf("got res.StatusCode %d; expected %d", g, e)
-		}
-	*/
 
+	assert.Equal(t, res.StatusCode(), 200)
+	assert.Equal(t, req.Header.Get("Vary"), "Accept-Encoding")
+	assert.Equal(t, req.Header.Get("Content-Encoding"), "gzip")
+	assert.NotEqual(t, req.Header.Get("Content-Length"), "0")
+	assert.NotEqual(t, fmt.Sprint(len(req.Body())), req.Header.Get("Content-Length"))
 }
+
+// TODO client handle gzip resp
