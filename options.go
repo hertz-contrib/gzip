@@ -151,7 +151,7 @@ func DefaultDecompressHandle(ctx context.Context, c *app.RequestContext) {
 
 func DecompressFn4Client(next client.Endpoint) client.Endpoint {
 	return func(ctx context.Context, req *protocol.Request, resp *protocol.Response) (err error) {
-		if len(req.Body()) <= 0 {
+		if len(resp.Body()) <= 0 {
 			return
 		}
 		gunzipBytes, err := compress.AppendGunzipBytes(nil, resp.Body())
