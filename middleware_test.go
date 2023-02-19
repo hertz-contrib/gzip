@@ -40,12 +40,13 @@ import (
 )
 
 func TestGzipForClient(t *testing.T) {
-	h := server.Default(server.WithHostPorts(":8080"))
+	h := server.Default(server.WithHostPorts(":2333"))
 	h.Use(Gzip(gzip.DefaultCompression))
 	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
 		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
 	})
-	h.Spin()
+	go h.Spin()
+	time.Sleep(time.Second)
 
 	cli, err := client.NewClient()
 	if err != nil {
@@ -55,9 +56,15 @@ func TestGzipForClient(t *testing.T) {
 	cli.Use(GzipForClient(DefaultCompression, WithDecompressFnForClient(DefaultDecompressFn4Client)))
 	req := protocol.AcquireRequest()
 	res := protocol.AcquireResponse()
-	req.SetRequestURI("http://localhost:8080/ping")
+	req.SetRequestURI("http://localhost:2333/ping")
 	cli.Do(context.Background(), req, res)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
+	/*
+		if g, e := resp.StatusCode(), backendStatus; g != e {
+			t.Errorf("got res.StatusCode %d; expected %d", g, e)
+		}
+	*/
+
 }
