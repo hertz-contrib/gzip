@@ -26,16 +26,38 @@
 package gzip
 
 import (
+	"compress/gzip"
+	"context"
+	"fmt"
+	"net/http"
 	"testing"
+	"time"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
+	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/protocol"
 )
 
 func TestGzipForClient(t *testing.T) {
+	h := server.Default(server.WithHostPorts(":8080"))
+	h.Use(Gzip(gzip.DefaultCompression))
+	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
+		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
+	})
+	h.Spin()
+
 	cli, err := client.NewClient()
 	if err != nil {
 		panic(err)
 	}
-	// TODO
-	cli.Use(GzipForClient(DefaultCompression, WithDecompressFnForClient(DecompressFn4Client)))
+	/*	cli.Use(GzipForClient(DefaultCompression))*/
+	cli.Use(GzipForClient(DefaultCompression, WithDecompressFnForClient(DefaultDecompressFn4Client)))
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+	req.SetRequestURI("http://localhost:8080/ping")
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
 }

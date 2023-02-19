@@ -149,7 +149,7 @@ func DefaultDecompressHandle(ctx context.Context, c *app.RequestContext) {
 	c.Request.SetBody(gunzipBytes)
 }
 
-func DecompressFn4Client(next client.Endpoint) client.Endpoint {
+func DefaultDecompressFn4Client(next client.Endpoint) client.Endpoint {
 	return func(ctx context.Context, req *protocol.Request, resp *protocol.Response) (err error) {
 		if len(resp.Body()) <= 0 {
 			return
