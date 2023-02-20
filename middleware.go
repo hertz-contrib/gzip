@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 CloudWeGo Authors
+ * Copyright 2023 CloudWeGo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  * The MIT License (MIT)
  *
- * Copyright (c) 2021 cyhone
+ * Copyright (c) 2016 Bo-Yi Wu
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal

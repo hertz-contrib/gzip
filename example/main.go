@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 CloudWeGo Authors
+ * Copyright 2023 CloudWeGo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  * The MIT License (MIT)
  *
- * Copyright (c) 2021 cyhone
+ * Copyright (c) 2016 Bo-Yi Wu
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +47,9 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/protocol"
 
 	"github.com/hertz-contrib/gzip"
 )
@@ -59,4 +61,21 @@ func main() {
 		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
 	})
 	h.Spin()
+
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	cli.Use(gzip.GzipForClient(gzip.DefaultCompression))
+
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://localhost:8080/ping")
+
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		panic(err)
+	}
 }
