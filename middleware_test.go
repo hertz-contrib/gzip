@@ -202,7 +202,6 @@ func TestNoGzipForClient(t *testing.T) {
 	assert.Equal(t, res.StatusCode(), 200)
 	assert.Equal(t, req.Header.Get("Content-Encoding"), "")
 	assert.Equal(t, req.Header.Get("Content-Length"), "3")
-
 }
 
 func TestDecompressGzipForClient(t *testing.T) {
@@ -239,5 +238,4 @@ func TestDecompressGzipForClient(t *testing.T) {
 	assert.Equal(t, res.Header.Get("Vary"), "")
 	assert.Equal(t, testResponse, string(res.Body()))
 	assert.Equal(t, "18", res.Header.Get("Content-Length"))
-
 }
