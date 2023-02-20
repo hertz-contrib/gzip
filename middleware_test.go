@@ -74,4 +74,170 @@ func TestGzipForClient(t *testing.T) {
 	assert.NotEqual(t, fmt.Sprint(len(req.Body())), req.Header.Get("Content-Length"))
 }
 
-// TODO client handle gzip resp
+func TestGzipPNGForClient(t *testing.T) {
+	h := server.Default(server.WithHostPorts(":2333"))
+
+	// 会对返回值进行解压
+	h.GET("/image.png", func(ctx context.Context, c *app.RequestContext) {
+		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
+		c.String(200, testResponse)
+	})
+	go h.Spin()
+	time.Sleep(time.Second)
+
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	cli.Use(GzipForClient(DefaultCompression))
+
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://localhost:2333/image.png")
+
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	assert.Equal(t, res.StatusCode(), 200)
+	assert.Equal(t, req.Header.Get("Vary"), "")
+	assert.Equal(t, req.Header.Get("Content-Encoding"), "")
+}
+
+func TestExcludedExtensionsForClient(t *testing.T) {
+	h := server.Default(server.WithHostPorts(":2333"))
+
+	// 会对返回值进行解压
+	h.GET("/index.html", func(ctx context.Context, c *app.RequestContext) {
+		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
+		c.String(200, testResponse)
+	})
+	go h.Spin()
+	time.Sleep(time.Second)
+
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	cli.Use(GzipForClient(DefaultCompression))
+
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://localhost:2333/image.png")
+
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	assert.Equal(t, res.StatusCode(), 200)
+	assert.Equal(t, req.Header.Get("Vary"), "")
+	assert.Equal(t, req.Header.Get("Content-Encoding"), "")
+}
+
+func TestExcludedPathsForClient(t *testing.T) {
+	h := server.Default(server.WithHostPorts(":2333"))
+
+	// 会对返回值进行解压
+	h.GET("/api/books", func(ctx context.Context, c *app.RequestContext) {
+		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
+		c.String(200, testResponse)
+	})
+	go h.Spin()
+	time.Sleep(time.Second)
+
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	cli.Use(GzipForClient(DefaultCompression, WithExcludedPaths([]string{"/api/"})))
+
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://localhost:2333/image.png")
+
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	assert.Equal(t, res.StatusCode(), 200)
+	assert.Equal(t, req.Header.Get("Vary"), "")
+	assert.Equal(t, req.Header.Get("Content-Encoding"), "")
+}
+
+func TestNoGzipForClient(t *testing.T) {
+	h := server.Default(server.WithHostPorts(":2333"))
+
+	// 会对返回值进行解压
+	h.GET("/", func(ctx context.Context, c *app.RequestContext) {
+		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
+		c.String(200, testResponse)
+	})
+	go h.Spin()
+	time.Sleep(time.Second)
+
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://localhost:2333/")
+
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	assert.Equal(t, res.StatusCode(), 200)
+	assert.Equal(t, req.Header.Get("Content-Encoding"), "")
+	assert.Equal(t, req.Header.Get("Content-Length"), "3")
+
+}
+
+func TestDecompressGzipForClient(t *testing.T) {
+	h := server.Default(server.WithHostPorts(":2333"))
+
+	// 会对返回值进行解压
+	h.GET("/", func(ctx context.Context, c *app.RequestContext) {
+		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
+		c.String(200, testResponse)
+	})
+	h.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
+	go h.Spin()
+	time.Sleep(time.Second)
+
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	cli.Use(GzipForClient(DefaultCompression, WithDecompressFnForClient(DefaultDecompressFn4Client)))
+
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://localhost:2333/")
+
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	assert.Equal(t, res.StatusCode(), 200)
+	assert.Equal(t, res.Header.Get("Content-Encoding"), "")
+	assert.Equal(t, res.Header.Get("Vary"), "")
+	assert.Equal(t, testResponse, string(res.Body()))
+	assert.Equal(t, "18", res.Header.Get("Content-Length"))
+
+}
