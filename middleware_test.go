@@ -55,9 +55,8 @@ import (
 )
 
 func TestGzipForClient(t *testing.T) {
-	h := server.Default(server.WithHostPorts(":2334"))
+	h := server.Default(server.WithHostPorts("127.0.0.1:2333"))
 
-	// 会对返回值进行解压
 	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
 		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
 		c.String(200, testResponse)
@@ -75,7 +74,7 @@ func TestGzipForClient(t *testing.T) {
 	res := protocol.AcquireResponse()
 
 	req.SetBodyString("bar")
-	req.SetRequestURI("http://localhost:2334/ping")
+	req.SetRequestURI("http://127.0.0.1:2333/ping")
 
 	cli.Do(context.Background(), req, res)
 	if err != nil {
@@ -90,9 +89,8 @@ func TestGzipForClient(t *testing.T) {
 }
 
 func TestGzipPNGForClient(t *testing.T) {
-	h := server.Default(server.WithHostPorts(":2335"))
+	h := server.Default(server.WithHostPorts("127.0.0.1:2334"))
 
-	// 会对返回值进行解压
 	h.GET("/image.png", func(ctx context.Context, c *app.RequestContext) {
 		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
 		c.String(200, testResponse)
@@ -104,13 +102,13 @@ func TestGzipPNGForClient(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	cli.Use(GzipForClient(DefaultCompression))
+	cli.Use(GzipForClient(DefaultCompression, WithExcludedExtensions([]string{".png"})))
 
 	req := protocol.AcquireRequest()
 	res := protocol.AcquireResponse()
 
 	req.SetBodyString("bar")
-	req.SetRequestURI("http://localhost:2335/image.png")
+	req.SetRequestURI("http://127.0.0.1:2334/image.png")
 
 	cli.Do(context.Background(), req, res)
 	if err != nil {
@@ -123,9 +121,8 @@ func TestGzipPNGForClient(t *testing.T) {
 }
 
 func TestExcludedExtensionsForClient(t *testing.T) {
-	h := server.Default(server.WithHostPorts(":2336"))
+	h := server.Default(server.WithHostPorts("127.0.0.1:3333"))
 
-	// 会对返回值进行解压
 	h.GET("/index.html", func(ctx context.Context, c *app.RequestContext) {
 		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
 		c.String(200, testResponse)
@@ -137,13 +134,13 @@ func TestExcludedExtensionsForClient(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	cli.Use(GzipForClient(DefaultCompression))
+	cli.Use(GzipForClient(DefaultCompression, WithExcludedExtensions([]string{".html"})))
 
 	req := protocol.AcquireRequest()
 	res := protocol.AcquireResponse()
 
 	req.SetBodyString("bar")
-	req.SetRequestURI("http://localhost:2336/image.png")
+	req.SetRequestURI("http://127.0.0.1:3333/index.html")
 
 	cli.Do(context.Background(), req, res)
 	if err != nil {
@@ -156,9 +153,8 @@ func TestExcludedExtensionsForClient(t *testing.T) {
 }
 
 func TestExcludedPathsForClient(t *testing.T) {
-	h := server.Default(server.WithHostPorts(":2337"))
+	h := server.Default(server.WithHostPorts("127.0.0.1:2336"))
 
-	// 会对返回值进行解压
 	h.GET("/api/books", func(ctx context.Context, c *app.RequestContext) {
 		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
 		c.String(200, testResponse)
@@ -176,7 +172,7 @@ func TestExcludedPathsForClient(t *testing.T) {
 	res := protocol.AcquireResponse()
 
 	req.SetBodyString("bar")
-	req.SetRequestURI("http://localhost:2337/image.png")
+	req.SetRequestURI("http://127.0.0.1:2336/api/books")
 
 	cli.Do(context.Background(), req, res)
 	if err != nil {
@@ -189,14 +185,14 @@ func TestExcludedPathsForClient(t *testing.T) {
 }
 
 func TestNoGzipForClient(t *testing.T) {
-	h := server.Default(server.WithHostPorts(":2338"))
+	h := server.Default(server.WithHostPorts("127.0.0.1:2337"))
 
-	// 会对返回值进行解压
 	h.GET("/", func(ctx context.Context, c *app.RequestContext) {
 		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
 		c.String(200, testResponse)
 	})
 	go h.Spin()
+
 	time.Sleep(time.Second)
 
 	cli, err := client.NewClient()
@@ -207,7 +203,7 @@ func TestNoGzipForClient(t *testing.T) {
 	res := protocol.AcquireResponse()
 
 	req.SetBodyString("bar")
-	req.SetRequestURI("http://localhost:2338/")
+	req.SetRequestURI("http://127.0.0.1:2337/")
 
 	cli.Do(context.Background(), req, res)
 	if err != nil {
@@ -220,15 +216,15 @@ func TestNoGzipForClient(t *testing.T) {
 }
 
 func TestDecompressGzipForClient(t *testing.T) {
-	h := server.Default(server.WithHostPorts(":2339"))
+	h := server.Default(server.WithHostPorts("127.0.0.1:2338"))
 
-	// 会对返回值进行解压
 	h.GET("/", func(ctx context.Context, c *app.RequestContext) {
 		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
 		c.String(200, testResponse)
 	})
 	h.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
 	go h.Spin()
+
 	time.Sleep(time.Second)
 
 	cli, err := client.NewClient()
@@ -241,7 +237,7 @@ func TestDecompressGzipForClient(t *testing.T) {
 	res := protocol.AcquireResponse()
 
 	req.SetBodyString("bar")
-	req.SetRequestURI("http://localhost:2339/")
+	req.SetRequestURI("http://127.0.0.1:2338/")
 
 	cli.Do(context.Background(), req, res)
 	if err != nil {
