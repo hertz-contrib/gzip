@@ -69,7 +69,7 @@ func newGzipMiddleware(level int, opts ...Option) *gzipMiddleware {
 
 func (g *gzipMiddleware) Middleware(next client.Endpoint) client.Endpoint {
 	return func(ctx context.Context, req *protocol.Request, resp *protocol.Response) (err error) {
-		if fn := g.DecompressFnForClient; fn != nil && resp.Header.Get("Content-Encoding") == "gzip" {
+		if fn := g.DecompressFnForClient; fn != nil && strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
 			fn(next)
 		}
 		if !g.shouldCompress(req) {
