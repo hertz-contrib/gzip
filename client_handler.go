@@ -51,13 +51,13 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol"
 )
 
-type gzipMiddleware struct {
+type gzipClientHandler struct {
 	*Options
 	level int
 }
 
-func newGzipMiddleware(level int, opts ...Option) *gzipMiddleware {
-	middleware := &gzipMiddleware{
+func newGzipClientHandler(level int, opts ...Option) *gzipClientHandler {
+	middleware := &gzipClientHandler{
 		Options: DefaultOptions,
 		level:   level,
 	}
@@ -67,7 +67,7 @@ func newGzipMiddleware(level int, opts ...Option) *gzipMiddleware {
 	return middleware
 }
 
-func (g *gzipMiddleware) Middleware(next client.Endpoint) client.Endpoint {
+func (g *gzipClientHandler) ClientHandle(next client.Endpoint) client.Endpoint {
 	return func(ctx context.Context, req *protocol.Request, resp *protocol.Response) (err error) {
 		if fn := g.DecompressFnForClient; fn != nil && strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
 			fn(next)
@@ -88,7 +88,7 @@ func (g *gzipMiddleware) Middleware(next client.Endpoint) client.Endpoint {
 	}
 }
 
-func (g *gzipMiddleware) shouldCompress(req *protocol.Request) bool {
+func (g *gzipClientHandler) shouldCompress(req *protocol.Request) bool {
 	if strings.Contains(req.Header.Get("Connection"), "Upgrade") ||
 		strings.Contains(req.Header.Get("Accept"), "text/event-stream") {
 		return false

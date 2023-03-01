@@ -48,11 +48,15 @@ import (
 	"net/http"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/client"
+	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/compress"
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/ut"
+	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/cloudwego/hertz/pkg/route"
 	"github.com/stretchr/testify/assert"
@@ -203,4 +207,201 @@ func TestDecompressGzipWithIncorrectData(t *testing.T) {
 		ut.Header{Key: "Content-Encoding", Value: "gzip"})
 	w := request.Result()
 	assert.Equal(t, http.StatusBadRequest, w.StatusCode())
+}
+
+func TestGzipForClient(t *testing.T) {
+	h := server.Default(server.WithHostPorts("127.0.0.1:2333"))
+
+	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
+		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
+		c.String(200, testResponse)
+	})
+	go h.Spin()
+	time.Sleep(time.Second)
+
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	cli.Use(GzipForClient(DefaultCompression))
+
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://127.0.0.1:2333/ping")
+
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	assert.Equal(t, res.StatusCode(), 200)
+	assert.Equal(t, req.Header.Get("Vary"), "Accept-Encoding")
+	assert.Equal(t, req.Header.Get("Content-Encoding"), "gzip")
+	assert.NotEqual(t, req.Header.Get("Content-Length"), "0")
+	assert.NotEqual(t, fmt.Sprint(len(req.Body())), req.Header.Get("Content-Length"))
+}
+
+func TestGzipPNGForClient(t *testing.T) {
+	h := server.Default(server.WithHostPorts("127.0.0.1:2334"))
+
+	h.GET("/image.png", func(ctx context.Context, c *app.RequestContext) {
+		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
+		c.String(200, testResponse)
+	})
+	go h.Spin()
+	time.Sleep(time.Second)
+
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	cli.Use(GzipForClient(DefaultCompression, WithExcludedExtensions([]string{".png"})))
+
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://127.0.0.1:2334/image.png")
+
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	assert.Equal(t, res.StatusCode(), 200)
+	assert.Equal(t, req.Header.Get("Vary"), "")
+	assert.Equal(t, req.Header.Get("Content-Encoding"), "")
+}
+
+func TestExcludedExtensionsForClient(t *testing.T) {
+	h := server.Default(server.WithHostPorts("127.0.0.1:3333"))
+
+	h.GET("/index.html", func(ctx context.Context, c *app.RequestContext) {
+		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
+		c.String(200, testResponse)
+	})
+	go h.Spin()
+	time.Sleep(time.Second)
+
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	cli.Use(GzipForClient(DefaultCompression, WithExcludedExtensions([]string{".html"})))
+
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://127.0.0.1:3333/index.html")
+
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	assert.Equal(t, res.StatusCode(), 200)
+	assert.Equal(t, req.Header.Get("Vary"), "")
+	assert.Equal(t, req.Header.Get("Content-Encoding"), "")
+}
+
+func TestExcludedPathsForClient(t *testing.T) {
+	h := server.Default(server.WithHostPorts("127.0.0.1:2336"))
+
+	h.GET("/api/books", func(ctx context.Context, c *app.RequestContext) {
+		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
+		c.String(200, testResponse)
+	})
+	go h.Spin()
+	time.Sleep(time.Second)
+
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	cli.Use(GzipForClient(DefaultCompression, WithExcludedPaths([]string{"/api/"})))
+
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://127.0.0.1:2336/api/books")
+
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	assert.Equal(t, res.StatusCode(), 200)
+	assert.Equal(t, req.Header.Get("Vary"), "")
+	assert.Equal(t, req.Header.Get("Content-Encoding"), "")
+}
+
+func TestNoGzipForClient(t *testing.T) {
+	h := server.Default(server.WithHostPorts("127.0.0.1:2337"))
+
+	h.GET("/", func(ctx context.Context, c *app.RequestContext) {
+		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
+		c.String(200, testResponse)
+	})
+	go h.Spin()
+
+	time.Sleep(time.Second)
+
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://127.0.0.1:2337/")
+
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	assert.Equal(t, res.StatusCode(), 200)
+	assert.Equal(t, req.Header.Get("Content-Encoding"), "")
+	assert.Equal(t, req.Header.Get("Content-Length"), "3")
+}
+
+func TestDecompressGzipForClient(t *testing.T) {
+	h := server.Default(server.WithHostPorts("127.0.0.1:2338"))
+
+	h.GET("/", func(ctx context.Context, c *app.RequestContext) {
+		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
+		c.String(200, testResponse)
+	})
+	h.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
+	go h.Spin()
+
+	time.Sleep(time.Second)
+
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	cli.Use(GzipForClient(DefaultCompression, WithDecompressFnForClient(DefaultDecompressFn4Client)))
+
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
+
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://127.0.0.1:2338/")
+
+	cli.Do(context.Background(), req, res)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	assert.Equal(t, res.StatusCode(), 200)
+	assert.Equal(t, res.Header.Get("Content-Encoding"), "")
+	assert.Equal(t, res.Header.Get("Vary"), "")
+	assert.Equal(t, testResponse, string(res.Body()))
+	assert.Equal(t, "18", res.Header.Get("Content-Length"))
 }
