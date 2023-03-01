@@ -5,17 +5,18 @@
 
 ## 使用
 
-下载并且安装它:
+下载并且安装它：
 
 ```sh
 go get github.com/hertz-contrib/gzip
 ```
 
-导入进你的代码:
+导入进你的代码：
 
 ```go
 import "github.com/hertz-contrib/gzip"
 ```
+### 服务端
 
 建议示例:
 ```go
@@ -120,6 +121,105 @@ func main() {
 		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
 	})
 	h.Spin()
+}
+```
+
+### 客户端
+
+建议示例：
+
+```go
+package main
+
+import (
+   "context"
+
+   "github.com/cloudwego/hertz/pkg/app/client"
+   "github.com/cloudwego/hertz/pkg/protocol"
+   "github.com/hertz-contrib/gzip"
+)
+
+func main() {
+   client, _ := client.NewClient()
+   client.Use(gzip.GzipForClient(gzip.DefaultCompression))
+   _, _, _ = client.Post(context.Background(),
+      []byte{},
+      "http://localhost:8080/ping",
+      &protocol.Args{})
+}
+```
+
+自定义排除的扩展
+
+```go
+package main
+
+import (
+   "context"
+
+   "github.com/cloudwego/hertz/pkg/app/client"
+   "github.com/cloudwego/hertz/pkg/protocol"
+   "github.com/hertz-contrib/gzip"
+)
+
+func main() {
+   client, _ := client.NewClient()
+   client.Use(gzip.GzipForClient(gzip.DefaultCompression,gzip.WithExcludedPathsForClient([]string{"/api/"})))
+   _, _, _ = client.Post(context.Background(),
+      []byte{},
+      "http://localhost:8080/ping",
+      &protocol.Args{})
+}
+```
+
+定制的排除路径
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/cloudwego/hertz/pkg/app/client"
+	"github.com/cloudwego/hertz/pkg/protocol"
+	"github.com/hertz-contrib/gzip"
+)
+
+func main() {
+	client, _ := client.NewClient()
+	client.Use(gzip.GzipForClient(gzip.DefaultCompression, gzip.WithExcludedExtensionsForClient([]string{".pdf", ".mp4"})))
+	statusCode, body, err := client.Post(context.Background(),
+		[]byte{},
+		"http://localhost:8080/ping",
+		&protocol.Args{})
+	fmt.Printf("%d, %s, %s", statusCode, body, err)
+}
+
+```
+
+定制的排除路径
+
+```go
+package main
+
+import (
+   "context"
+   "fmt"
+
+   "github.com/cloudwego/hertz/pkg/app/client"
+   "github.com/cloudwego/hertz/pkg/protocol"
+   "github.com/hertz-contrib/gzip"
+)
+
+func main() {
+   client, _ := client.NewClient()
+   client.Use(gzip.GzipForClient(gzip.DefaultCompression, gzip.WithExcludedPathRegexesForClient([]string{".*"})))
+   statusCode, body, err := client.Post(context.Background(),
+      []byte{},
+      "http://localhost:8080/ping",
+      &protocol.Args{})
+   fmt.Printf("%d, %s, %s", statusCode, body, err)
 }
 ```
 
