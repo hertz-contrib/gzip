@@ -46,50 +46,50 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/common/compress"
 	"github.com/cloudwego/hertz/pkg/protocol"
 )
 
-type gzipHandler struct {
-	*Options
+type gzipClientMiddleware struct {
+	*ClientOptions
 	level int
 }
 
-func newGzipHandler(level int, opts ...Option) *gzipHandler {
-	handler := &gzipHandler{
-		Options: DefaultOptions,
-		level:   level,
+func newGzipClientMiddleware(level int, opts ...ClientOption) *gzipClientMiddleware {
+	middleware := &gzipClientMiddleware{
+		ClientOptions: DefaultClientOptions,
+		level:         level,
 	}
 	for _, fn := range opts {
-		fn(handler.Options)
+		fn(middleware.ClientOptions)
 	}
-	return handler
+	return middleware
 }
 
-func (g *gzipHandler) Handle(ctx context.Context, c *app.RequestContext) {
-	if fn := g.DecompressFn; fn != nil && strings.EqualFold(c.Request.Header.Get("Content-Encoding"), "gzip") {
-		fn(ctx, c)
-	}
-	if !g.shouldCompress(&c.Request) {
-		return
-	}
+func (g *gzipClientMiddleware) ClientMiddleware(next client.Endpoint) client.Endpoint {
+	return func(ctx context.Context, req *protocol.Request, resp *protocol.Response) (err error) {
+		if fn := g.DecompressFnForClient; fn != nil && strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
+			fn(next)
+		}
+		if !g.shouldCompress(req) {
+			return
+		}
 
-	c.Next(ctx)
+		if len(req.Body()) <= 0 {
+			return
+		}
 
-	if len(c.Response.Body()) <= 0 {
-		return
+		req.SetHeader("Content-Encoding", "gzip")
+		req.SetHeader("Vary", "Accept-Encoding")
+		gzipBytes := compress.AppendGzipBytesLevel(nil, req.Body(), g.level)
+		req.SetBodyStream(bytes.NewBuffer(gzipBytes), len(gzipBytes))
+		return next(ctx, req, resp)
 	}
-
-	c.Header("Content-Encoding", "gzip")
-	c.Header("Vary", "Accept-Encoding")
-	gzipBytes := compress.AppendGzipBytesLevel(nil, c.Response.Body(), g.level)
-	c.Response.SetBodyStream(bytes.NewBuffer(gzipBytes), len(gzipBytes))
 }
 
-func (g *gzipHandler) shouldCompress(req *protocol.Request) bool {
-	if !strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") ||
-		strings.Contains(req.Header.Get("Connection"), "Upgrade") ||
+func (g *gzipClientMiddleware) shouldCompress(req *protocol.Request) bool {
+	if strings.Contains(req.Header.Get("Connection"), "Upgrade") ||
 		strings.Contains(req.Header.Get("Accept"), "text/event-stream") {
 		return false
 	}

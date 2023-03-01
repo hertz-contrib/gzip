@@ -55,9 +55,9 @@ const (
 )
 
 func Gzip(level int, options ...Option) app.HandlerFunc {
-	return newGzipHandler(level, options...).Handle
+	return newGzipSrvMiddleware(level, options...).SrvMiddleware
 }
 
-func GzipForClient(level int, options ...Option) client.Middleware {
-	return newGzipClientHandler(level, options...).ClientHandle
+func GzipForClient(level int, options ...ClientOption) client.Middleware {
+	return newGzipClientMiddleware(level, options...).ClientMiddleware
 }

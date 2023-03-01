@@ -157,7 +157,7 @@ func TestDecompressGzip(t *testing.T) {
 	}
 	gz.Close()
 	router := route.NewEngine(config.NewOptions([]config.Option{}))
-	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
+	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressMiddleware)))
 	router.POST("/", func(ctx context.Context, c *app.RequestContext) {
 		if v := c.Request.Header.Get("Content-Encoding"); v != "" {
 			t.Errorf("unexpected `Content-Encoding`: %s header", v)
@@ -181,7 +181,7 @@ func TestDecompressGzip(t *testing.T) {
 
 func TestDecompressGzipWithEmptyBody(t *testing.T) {
 	router := route.NewEngine(config.NewOptions([]config.Option{}))
-	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
+	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressMiddleware)))
 	router.POST("/", func(ctx context.Context, c *app.RequestContext) {
 		c.String(200, "ok")
 	})
@@ -198,7 +198,7 @@ func TestDecompressGzipWithEmptyBody(t *testing.T) {
 
 func TestDecompressGzipWithIncorrectData(t *testing.T) {
 	router := route.NewEngine(config.NewOptions([]config.Option{}))
-	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
+	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressMiddleware)))
 	router.POST("/", func(ctx context.Context, c *app.RequestContext) {
 		c.String(200, "ok")
 	})
@@ -257,7 +257,7 @@ func TestGzipPNGForClient(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	cli.Use(GzipForClient(DefaultCompression, WithExcludedExtensions([]string{".png"})))
+	cli.Use(GzipForClient(DefaultCompression, WithExcludedExtensionsForClient([]string{".png"})))
 
 	req := protocol.AcquireRequest()
 	res := protocol.AcquireResponse()
@@ -289,7 +289,7 @@ func TestExcludedExtensionsForClient(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	cli.Use(GzipForClient(DefaultCompression, WithExcludedExtensions([]string{".html"})))
+	cli.Use(GzipForClient(DefaultCompression, WithExcludedExtensionsForClient([]string{".html"})))
 
 	req := protocol.AcquireRequest()
 	res := protocol.AcquireResponse()
@@ -321,7 +321,7 @@ func TestExcludedPathsForClient(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	cli.Use(GzipForClient(DefaultCompression, WithExcludedPaths([]string{"/api/"})))
+	cli.Use(GzipForClient(DefaultCompression, WithExcludedPathsForClient([]string{"/api/"})))
 
 	req := protocol.AcquireRequest()
 	res := protocol.AcquireResponse()
@@ -377,7 +377,7 @@ func TestDecompressGzipForClient(t *testing.T) {
 		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
 		c.String(200, testResponse)
 	})
-	h.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
+	h.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressMiddleware)))
 	go h.Spin()
 
 	time.Sleep(time.Second)
@@ -386,7 +386,7 @@ func TestDecompressGzipForClient(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	cli.Use(GzipForClient(DefaultCompression, WithDecompressFnForClient(DefaultDecompressFn4Client)))
+	cli.Use(GzipForClient(DefaultCompression, WithDecompressFnForClient(DefaultDecompressMiddlewareForClient)))
 
 	req := protocol.AcquireRequest()
 	res := protocol.AcquireResponse()
