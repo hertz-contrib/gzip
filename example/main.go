@@ -55,12 +55,12 @@ import (
 )
 
 func main() {
-	h := server.Default(server.WithHostPorts(":8080"))
+	h := server.Default(server.WithHostPorts(":8081"))
 	h.Use(gzip.Gzip(gzip.DefaultCompression))
 	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
 		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
 	})
-	h.Spin()
+	go h.Spin()
 
 	cli, err := client.NewClient()
 	if err != nil {
@@ -72,10 +72,11 @@ func main() {
 	res := protocol.AcquireResponse()
 
 	req.SetBodyString("bar")
-	req.SetRequestURI("http://localhost:8080/ping")
+	req.SetRequestURI("http://localhost:8081/ping")
 
 	cli.Do(context.Background(), req, res)
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(fmt.Sprintf("%v", res))
 }
