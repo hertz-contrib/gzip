@@ -78,5 +78,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(fmt.Sprintf("%v", res))
+	fmt.Println(fmt.Printf("%v", res))
 }
