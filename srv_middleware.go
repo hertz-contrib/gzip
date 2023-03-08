@@ -38,45 +38,75 @@
 * Modifications are Copyright 2022 CloudWeGo Authors.
 */
 
-package main
+package gzip
 
 import (
+	"bytes"
 	"context"
-	"fmt"
-	"net/http"
-	"time"
+	"path/filepath"
+	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/app/client"
-	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/common/compress"
 	"github.com/cloudwego/hertz/pkg/protocol"
-
-	"github.com/hertz-contrib/gzip"
 )
 
-func main() {
-	h := server.Default(server.WithHostPorts(":8081"))
-	h.Use(gzip.Gzip(gzip.DefaultCompression))
-	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
-		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
-	})
-	go h.Spin()
+type gzipSrvMiddleware struct {
+	*Options
+	level int
+}
 
-	cli, err := client.NewClient()
-	if err != nil {
-		panic(err)
+func newGzipSrvMiddleware(level int, opts ...Option) *gzipSrvMiddleware {
+	handler := &gzipSrvMiddleware{
+		Options: DefaultOptions,
+		level:   level,
 	}
-	cli.Use(gzip.GzipForClient(gzip.DefaultCompression))
-
-	req := protocol.AcquireRequest()
-	res := protocol.AcquireResponse()
-
-	req.SetBodyString("bar")
-	req.SetRequestURI("http://localhost:8081/ping")
-
-	cli.Do(context.Background(), req, res)
-	if err != nil {
-		panic(err)
+	for _, fn := range opts {
+		fn(handler.Options)
 	}
-	fmt.Println(fmt.Printf("%v", res))
+	return handler
+}
+
+func (g *gzipSrvMiddleware) SrvMiddleware(ctx context.Context, c *app.RequestContext) {
+	if fn := g.DecompressFn; fn != nil && strings.EqualFold(c.Request.Header.Get("Content-Encoding"), "gzip") {
+		fn(ctx, c)
+	}
+	if !g.shouldCompress(&c.Request) {
+		return
+	}
+
+	c.Next(ctx)
+
+	if len(c.Response.Body()) <= 0 {
+		return
+	}
+
+	c.Header("Content-Encoding", "gzip")
+	c.Header("Vary", "Accept-Encoding")
+	gzipBytes := compress.AppendGzipBytesLevel(nil, c.Response.Body(), g.level)
+	c.Response.SetBodyStream(bytes.NewBuffer(gzipBytes), len(gzipBytes))
+}
+
+func (g *gzipSrvMiddleware) shouldCompress(req *protocol.Request) bool {
+	if !strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") ||
+		strings.Contains(req.Header.Get("Connection"), "Upgrade") ||
+		strings.Contains(req.Header.Get("Accept"), "text/event-stream") {
+		return false
+	}
+
+	path := string(req.URI().RequestURI())
+
+	extension := filepath.Ext(path)
+	if g.ExcludedExtensions.Contains(extension) {
+		return false
+	}
+
+	if g.ExcludedPaths.Contains(path) {
+		return false
+	}
+	if g.ExcludedPathRegexes.Contains(path) {
+		return false
+	}
+
+	return true
 }

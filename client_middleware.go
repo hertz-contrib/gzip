@@ -38,45 +38,75 @@
 * Modifications are Copyright 2022 CloudWeGo Authors.
 */
 
-package main
+package gzip
 
 import (
+	"bytes"
 	"context"
-	"fmt"
-	"net/http"
-	"time"
+	"path/filepath"
+	"strings"
 
-	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
-	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/common/compress"
 	"github.com/cloudwego/hertz/pkg/protocol"
-
-	"github.com/hertz-contrib/gzip"
 )
 
-func main() {
-	h := server.Default(server.WithHostPorts(":8081"))
-	h.Use(gzip.Gzip(gzip.DefaultCompression))
-	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
-		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
-	})
-	go h.Spin()
+type gzipClientMiddleware struct {
+	*ClientOptions
+	level int
+}
 
-	cli, err := client.NewClient()
-	if err != nil {
-		panic(err)
+func newGzipClientMiddleware(level int, opts ...ClientOption) *gzipClientMiddleware {
+	middleware := &gzipClientMiddleware{
+		ClientOptions: DefaultClientOptions,
+		level:         level,
 	}
-	cli.Use(gzip.GzipForClient(gzip.DefaultCompression))
-
-	req := protocol.AcquireRequest()
-	res := protocol.AcquireResponse()
-
-	req.SetBodyString("bar")
-	req.SetRequestURI("http://localhost:8081/ping")
-
-	cli.Do(context.Background(), req, res)
-	if err != nil {
-		panic(err)
+	for _, fn := range opts {
+		fn(middleware.ClientOptions)
 	}
-	fmt.Println(fmt.Printf("%v", res))
+	return middleware
+}
+
+func (g *gzipClientMiddleware) ClientMiddleware(next client.Endpoint) client.Endpoint {
+	return func(ctx context.Context, req *protocol.Request, resp *protocol.Response) (err error) {
+		if fn := g.DecompressFnForClient; fn != nil && strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
+			fn(next)
+		}
+		if !g.shouldCompress(req) {
+			return
+		}
+
+		if len(req.Body()) <= 0 {
+			return
+		}
+
+		req.SetHeader("Content-Encoding", "gzip")
+		req.SetHeader("Vary", "Accept-Encoding")
+		gzipBytes := compress.AppendGzipBytesLevel(nil, req.Body(), g.level)
+		req.SetBodyStream(bytes.NewBuffer(gzipBytes), len(gzipBytes))
+		return next(ctx, req, resp)
+	}
+}
+
+func (g *gzipClientMiddleware) shouldCompress(req *protocol.Request) bool {
+	if strings.Contains(req.Header.Get("Connection"), "Upgrade") ||
+		strings.Contains(req.Header.Get("Accept"), "text/event-stream") {
+		return false
+	}
+
+	path := string(req.URI().RequestURI())
+
+	extension := filepath.Ext(path)
+	if g.ExcludedExtensions.Contains(extension) {
+		return false
+	}
+
+	if g.ExcludedPaths.Contains(path) {
+		return false
+	}
+	if g.ExcludedPathRegexes.Contains(path) {
+		return false
+	}
+
+	return true
 }
