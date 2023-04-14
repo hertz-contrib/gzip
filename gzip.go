@@ -41,10 +41,9 @@
 package gzip
 
 import (
-	"compress/gzip"
-
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
+	"github.com/klauspost/compress/gzip"
 )
 
 const (

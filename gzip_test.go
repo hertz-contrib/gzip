@@ -42,7 +42,6 @@ package gzip
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"fmt"
 	"net/http"
@@ -59,6 +58,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/cloudwego/hertz/pkg/route"
+	"github.com/klauspost/compress/gzip"
 	"github.com/stretchr/testify/assert"
 )
 
