@@ -46,8 +46,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hertz-contrib/gzip/compress"
+
 	"github.com/cloudwego/hertz/pkg/app/client"
-	"github.com/cloudwego/hertz/pkg/common/compress"
 	"github.com/cloudwego/hertz/pkg/protocol"
 )
 

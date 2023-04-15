@@ -41,7 +41,7 @@
 package gzip
 
 import (
-	"compress/gzip"
+	"github.com/klauspost/compress/gzip"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"

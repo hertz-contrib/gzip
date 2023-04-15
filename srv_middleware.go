@@ -47,8 +47,8 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/common/compress"
 	"github.com/cloudwego/hertz/pkg/protocol"
+	"github.com/hertz-contrib/gzip/compress"
 )
 
 type gzipSrvMiddleware struct {
