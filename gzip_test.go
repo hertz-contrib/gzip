@@ -196,6 +196,23 @@ func TestDecompressGzipWithEmptyBody(t *testing.T) {
 	assert.Equal(t, "2", w.Header.Get("Content-Length"))
 }
 
+func TestDecompressGzipWithSkipFunc(t *testing.T) {
+	router := route.NewEngine(config.NewOptions([]config.Option{}))
+	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressMiddleware)))
+	router.POST("/", func(ctx context.Context, c *app.RequestContext) {
+		c.SetStatusCode(200)
+	})
+
+	request := ut.PerformRequest(router, consts.MethodPost, "/", nil,
+		ut.Header{Key: "Accept-Encoding", Value: "gzip"})
+	w := request.Result()
+	assert.Equal(t, http.StatusOK, w.StatusCode())
+	assert.Equal(t, "gzip", w.Header.Get("Content-Encoding"))
+	assert.Equal(t, "Accept-Encoding", w.Header.Get("Vary"))
+	assert.Equal(t, "", string(w.Body()))
+	assert.Equal(t, "0", w.Header.Get("Content-Length"))
+}
+
 func TestDecompressGzipWithIncorrectData(t *testing.T) {
 	router := route.NewEngine(config.NewOptions([]config.Option{}))
 	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressMiddleware)))
@@ -231,7 +248,7 @@ func TestGzipForClient(t *testing.T) {
 	req.SetBodyString("bar")
 	req.SetRequestURI("http://127.0.0.1:2333/ping")
 
-	cli.Do(context.Background(), req, res)
+	err = cli.Do(context.Background(), req, res)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -265,7 +282,7 @@ func TestGzipPNGForClient(t *testing.T) {
 	req.SetBodyString("bar")
 	req.SetRequestURI("http://127.0.0.1:2334/image.png")
 
-	cli.Do(context.Background(), req, res)
+	err = cli.Do(context.Background(), req, res)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -297,7 +314,7 @@ func TestExcludedExtensionsForClient(t *testing.T) {
 	req.SetBodyString("bar")
 	req.SetRequestURI("http://127.0.0.1:3333/index.html")
 
-	cli.Do(context.Background(), req, res)
+	err = cli.Do(context.Background(), req, res)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -329,7 +346,7 @@ func TestExcludedPathsForClient(t *testing.T) {
 	req.SetBodyString("bar")
 	req.SetRequestURI("http://127.0.0.1:2336/api/books")
 
-	cli.Do(context.Background(), req, res)
+	err = cli.Do(context.Background(), req, res)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -360,7 +377,7 @@ func TestNoGzipForClient(t *testing.T) {
 	req.SetBodyString("bar")
 	req.SetRequestURI("http://127.0.0.1:2337/")
 
-	cli.Do(context.Background(), req, res)
+	err = cli.Do(context.Background(), req, res)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
@@ -394,7 +411,7 @@ func TestDecompressGzipForClient(t *testing.T) {
 	req.SetBodyString("bar")
 	req.SetRequestURI("http://127.0.0.1:2338/")
 
-	cli.Do(context.Background(), req, res)
+	err = cli.Do(context.Background(), req, res)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
