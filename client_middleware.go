@@ -76,14 +76,12 @@ func (g *gzipClientMiddleware) ClientMiddleware(next client.Endpoint) client.End
 			return
 		}
 
-		if len(req.Body()) <= 0 {
-			return
-		}
-
 		req.SetHeader("Content-Encoding", "gzip")
 		req.SetHeader("Vary", "Accept-Encoding")
-		gzipBytes := compress.AppendGzipBytesLevel(nil, req.Body(), g.level)
-		req.SetBodyStream(bytes.NewBuffer(gzipBytes), len(gzipBytes))
+		if len(req.Body()) > 0 {
+			gzipBytes := compress.AppendGzipBytesLevel(nil, req.Body(), g.level)
+			req.SetBodyStream(bytes.NewBuffer(gzipBytes), len(gzipBytes))
+		}
 		return next(ctx, req, resp)
 	}
 }
