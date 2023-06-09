@@ -82,7 +82,7 @@ func (g *gzipClientMiddleware) ClientMiddleware(next client.Endpoint) client.End
 
 		err = next(ctx, req, resp)
 		if err != nil {
-			return err
+			return
 		}
 		if fn := g.DecompressFnForClient; fn != nil && strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
 			fn(next)
