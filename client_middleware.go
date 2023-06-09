@@ -69,9 +69,6 @@ func newGzipClientMiddleware(level int, opts ...ClientOption) *gzipClientMiddlew
 
 func (g *gzipClientMiddleware) ClientMiddleware(next client.Endpoint) client.Endpoint {
 	return func(ctx context.Context, req *protocol.Request, resp *protocol.Response) (err error) {
-		if fn := g.DecompressFnForClient; fn != nil && strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
-			fn(next)
-		}
 		if !g.shouldCompress(req) {
 			return
 		}
@@ -82,7 +79,15 @@ func (g *gzipClientMiddleware) ClientMiddleware(next client.Endpoint) client.End
 			gzipBytes := compress.AppendGzipBytesLevel(nil, req.Body(), g.level)
 			req.SetBodyStream(bytes.NewBuffer(gzipBytes), len(gzipBytes))
 		}
-		return next(ctx, req, resp)
+
+		err = next(ctx, req, resp)
+		if err != nil {
+			return err
+		}
+		if fn := g.DecompressFnForClient; fn != nil && strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
+			fn(next)
+		}
+		return nil
 	}
 }
 
