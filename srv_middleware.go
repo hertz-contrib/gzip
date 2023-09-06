@@ -86,7 +86,8 @@ func (g *gzipSrvMiddleware) SrvMiddleware(ctx context.Context, c *app.RequestCon
 }
 
 func (g *gzipSrvMiddleware) shouldCompress(req *protocol.Request) bool {
-	if !strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") ||
+	if !(strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") ||
+		strings.TrimSpace(req.Header.Get("Accept-Encoding")) == "*") ||
 		strings.Contains(req.Header.Get("Connection"), "Upgrade") ||
 		strings.Contains(req.Header.Get("Accept"), "text/event-stream") {
 		return false
