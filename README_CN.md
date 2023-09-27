@@ -42,7 +42,6 @@ func main() {
 	})
 	h.Spin()
 }
-
 ```
 
 自定义排除的扩展
@@ -119,6 +118,39 @@ func main() {
 	h.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPathRegexes([]string{".*"})))
 	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
 		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
+	})
+	h.Spin()
+}
+```
+
+### 服务端-流式压缩
+
+服务端先将数据压缩再流式写出去
+
+建议示例:
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+	
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/hertz-contrib/gzip"
+	
+)
+
+func main() {
+	h := server.Default(server.WithHostPorts(":8081"))
+	h.Use(gzip.GzipStream(gzip.DefaultCompression))
+	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
+		for i := 0; i < 10; i++ {
+			c.Write([]byte(fmt.Sprintf("chunk %d: %s\n", i, strings.Repeat("hi~", i)))) // nolint: errcheck
+			c.Flush()                                                                   // nolint: errcheck
+			time.Sleep(200 * time.Millisecond)
+		}
 	})
 	h.Spin()
 }
@@ -226,4 +258,4 @@ func main() {
 
 ## 许可证
 
-本项目采用Apache许可证。参见 [LICENSE](LICENSE) 文件中的完整许可证文本。
+本项目采用 Apache 许可证。参见 [LICENSE](LICENSE) 文件中的完整许可证文本。

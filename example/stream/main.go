@@ -43,40 +43,53 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/common/compress"
 	"github.com/cloudwego/hertz/pkg/protocol"
-
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/hertz-contrib/gzip"
 )
 
 func main() {
 	h := server.Default(server.WithHostPorts(":8081"))
-	h.Use(gzip.Gzip(gzip.DefaultCompression))
+	h.Use(gzip.GzipStream(gzip.DefaultCompression))
 	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
-		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
+		for i := 0; i < 10; i++ {
+			c.Write([]byte(fmt.Sprintf("chunk %d: %s\n", i, strings.Repeat("hi~", i)))) // nolint: errcheck
+			c.Flush()                                                                   // nolint: errcheck
+			time.Sleep(200 * time.Millisecond)
+		}
 	})
 	go h.Spin()
 
-	cli, err := client.NewClient()
+	cli, err := client.NewClient(client.WithResponseBodyStream(true))
 	if err != nil {
 		panic(err)
 	}
-	cli.Use(gzip.GzipForClient(gzip.DefaultCompression))
 
 	req := protocol.AcquireRequest()
 	res := protocol.AcquireResponse()
 
-	req.SetBodyString("bar")
+	req.SetMethod(consts.MethodGet)
 	req.SetRequestURI("http://localhost:8081/ping")
+	req.Header.Set("Accept-Encoding", "gzip")
 
-	cli.Do(context.Background(), req, res)
+	if err = cli.Do(context.Background(), req, res); err != nil {
+		panic(err)
+	}
+
+	bodyStream := res.BodyStream()
+	compressedData, _ := ioutil.ReadAll(bodyStream)
+	gunzipBytes, err := compress.AppendGunzipBytes(nil, compressedData)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(fmt.Printf("%v", res))
+
+	fmt.Println(fmt.Printf("%s", gunzipBytes))
 }
