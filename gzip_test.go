@@ -426,7 +426,7 @@ func TestDecompressGzipForClient(t *testing.T) {
 }
 
 func TestStreamGzip(t *testing.T) {
-	var data = `chunk 0: 
+	data := `chunk 0: 
 chunk 1: hi~
 chunk 2: hi~hi~
 chunk 3: hi~hi~hi~
