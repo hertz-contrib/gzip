@@ -127,6 +127,8 @@ func main() {
 
 服务端先将数据压缩再流式写出去
 
+> 注意：使用该中间件会劫持 response writer，可能会对其他接口造成影响，因此，只需要在有流式 gzip 需求的接口使用该中间件。
+
 建议示例:
 ```go
 package main
@@ -139,13 +141,13 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/hertz-contrib/gzip"
-	
 )
 
 func main() {
 	h := server.Default(server.WithHostPorts(":8081"))
-	h.Use(gzip.GzipStream(gzip.DefaultCompression))
-	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
+	// Note: Using this middleware will hijack the response writer and may have an impact on other interfaces.
+	// Therefore, it is only necessary to use this middleware on interfaces with streaming gzip requirements.
+	h.GET("/ping", gzip.GzipStream(gzip.DefaultCompression), func(ctx context.Context, c *app.RequestContext) {
 		for i := 0; i < 10; i++ {
 			c.Write([]byte(fmt.Sprintf("chunk %d: %s\n", i, strings.Repeat("hi~", i)))) // nolint: errcheck
 			c.Flush()                                                                   // nolint: errcheck
