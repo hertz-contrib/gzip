@@ -89,6 +89,19 @@ func TestGzip(t *testing.T) {
 	assert.Equal(t, fmt.Sprint(len(w.Body())), w.Header.Get("Content-Length"))
 }
 
+func TestWildcard(t *testing.T) {
+	request := ut.PerformRequest(newServer(), consts.MethodGet, "/", nil, ut.Header{
+		Key: "Accept-Encoding", Value: "*",
+	})
+	w := request.Result()
+	assert.Equal(t, w.StatusCode(), 200)
+	assert.Equal(t, w.Header.Get("Vary"), "Accept-Encoding")
+	assert.Equal(t, w.Header.Get("Content-Encoding"), "gzip")
+	assert.NotEqual(t, w.Header.Get("Content-Length"), "0")
+	assert.NotEqual(t, len(w.Body()), 19)
+	assert.Equal(t, fmt.Sprint(len(w.Body())), w.Header.Get("Content-Length"))
+}
+
 func TestGzipPNG(t *testing.T) {
 	router := route.NewEngine(config.NewOptions([]config.Option{}))
 	router.Use(Gzip(DefaultCompression))
