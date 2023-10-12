@@ -45,8 +45,10 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -434,4 +436,62 @@ func TestDecompressGzipForClient(t *testing.T) {
 	assert.Equal(t, res.Header.Get("Vary"), "")
 	assert.Equal(t, testResponse, string(res.Body()))
 	assert.Equal(t, "18", res.Header.Get("Content-Length"))
+}
+
+func TestStreamGzip(t *testing.T) {
+	data := `chunk 0: 
+chunk 1: hi~
+chunk 2: hi~hi~
+chunk 3: hi~hi~hi~
+chunk 4: hi~hi~hi~hi~
+chunk 5: hi~hi~hi~hi~hi~
+chunk 6: hi~hi~hi~hi~hi~hi~
+chunk 7: hi~hi~hi~hi~hi~hi~hi~
+chunk 8: hi~hi~hi~hi~hi~hi~hi~hi~
+chunk 9: hi~hi~hi~hi~hi~hi~hi~hi~hi~
+`
+	h := server.Default(server.WithHostPorts("127.0.0.1:2339"))
+
+	h.Use(GzipStream(DefaultCompression))
+	h.GET("/", func(ctx context.Context, c *app.RequestContext) {
+		for i := 0; i < 10; i++ {
+			c.Write([]byte(fmt.Sprintf("chunk %d: %s\n", i, strings.Repeat("hi~", i)))) // nolint: errcheck
+			c.Flush()                                                                   // nolint: errcheck
+			time.Sleep(200 * time.Millisecond)
+		}
+	})
+
+	go h.Spin()
+
+	time.Sleep(time.Second)
+
+	c, _ := client.NewClient(client.WithResponseBodyStream(true))
+
+	req := &protocol.Request{}
+	resp := &protocol.Response{}
+	defer func() {
+		protocol.ReleaseRequest(req)
+		protocol.ReleaseResponse(resp)
+	}()
+
+	req.SetMethod(consts.MethodGet)
+	req.SetRequestURI("http://127.0.0.1:2339/")
+	req.Header.Set("Accept-Encoding", "gzip")
+
+	err := c.Do(context.Background(), req, resp)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	bodyStream := resp.BodyStream()
+	compressedData, _ := ioutil.ReadAll(bodyStream)
+	gunzipBytes, err := compress.AppendGunzipBytes(nil, compressedData)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	assert.Equal(t, "gzip", resp.Header.Get("Content-Encoding"))
+	assert.Equal(t, "chunked", resp.Header.Get("Transfer-Encoding"))
+	assert.Equal(t, "Accept-Encoding", resp.Header.Get("Vary"))
+	assert.Equal(t, data, string(gunzipBytes))
 }

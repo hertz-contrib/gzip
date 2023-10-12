@@ -42,7 +42,6 @@ func main() {
 	})
 	h.Spin()
 }
-
 ```
 
 自定义排除的扩展
@@ -119,6 +118,41 @@ func main() {
 	h.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPathRegexes([]string{".*"})))
 	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
 		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
+	})
+	h.Spin()
+}
+```
+
+### 服务端-流式压缩
+
+服务端先将数据压缩再流式写出去
+
+> 注意：使用该中间件会劫持 response writer，可能会对其他接口造成影响，因此，只需要在有流式 gzip 需求的接口使用该中间件。
+
+建议示例:
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+	
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/hertz-contrib/gzip"
+)
+
+func main() {
+	h := server.Default(server.WithHostPorts(":8081"))
+	// Note: Using this middleware will hijack the response writer and may have an impact on other interfaces.
+	// Therefore, it is only necessary to use this middleware on interfaces with streaming gzip requirements.
+	h.GET("/ping", gzip.GzipStream(gzip.DefaultCompression), func(ctx context.Context, c *app.RequestContext) {
+		for i := 0; i < 10; i++ {
+			c.Write([]byte(fmt.Sprintf("chunk %d: %s\n", i, strings.Repeat("hi~", i)))) // nolint: errcheck
+			c.Flush()                                                                   // nolint: errcheck
+			time.Sleep(200 * time.Millisecond)
+		}
 	})
 	h.Spin()
 }
@@ -226,4 +260,4 @@ func main() {
 
 ## 许可证
 
-本项目采用Apache许可证。参见 [LICENSE](LICENSE) 文件中的完整许可证文本。
+本项目采用 Apache 许可证。参见 [LICENSE](LICENSE) 文件中的完整许可证文本。

@@ -38,30 +38,44 @@
 * Modifications are Copyright 2022 CloudWeGo Authors.
 */
 
-package gzip
+package main
 
 import (
-	"compress/gzip"
+	"context"
+	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/client"
+	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/protocol"
+
+	"github.com/hertz-contrib/gzip"
 )
 
-const (
-	BestCompression    = gzip.BestCompression
-	BestSpeed          = gzip.BestSpeed
-	DefaultCompression = gzip.DefaultCompression
-	NoCompression      = gzip.NoCompression
-)
+func main() {
+	h := server.Default(server.WithHostPorts(":8081"))
+	h.Use(gzip.Gzip(gzip.DefaultCompression))
+	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
+		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
+	})
+	go h.Spin()
 
-func Gzip(level int, options ...Option) app.HandlerFunc {
-	return newGzipSrvMiddleware(level, options...).SrvMiddleware
-}
+	cli, err := client.NewClient()
+	if err != nil {
+		panic(err)
+	}
+	cli.Use(gzip.GzipForClient(gzip.DefaultCompression))
 
-func GzipStream(level int, options ...Option) app.HandlerFunc {
-	return newGzipSrvMiddleware(level, options...).SrvStreamMiddleware
-}
+	req := protocol.AcquireRequest()
+	res := protocol.AcquireResponse()
 
-func GzipForClient(level int, options ...ClientOption) client.Middleware {
-	return newGzipClientMiddleware(level, options...).ClientMiddleware
+	req.SetBodyString("bar")
+	req.SetRequestURI("http://localhost:8081/ping")
+
+	if err = cli.Do(context.Background(), req, res); err != nil {
+		panic(err)
+	}
+	fmt.Println(fmt.Printf("%v", res))
 }
