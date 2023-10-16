@@ -493,7 +493,7 @@ chunk 9: hi~hi~hi~hi~hi~hi~hi~hi~hi~
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
-	
+
 	firstChunkData, err := compress.AppendGunzipBytes(nil, firstChunk)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
