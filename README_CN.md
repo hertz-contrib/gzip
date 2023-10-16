@@ -151,7 +151,7 @@ func main() {
 		for i := 0; i < 10; i++ {
 			c.Write([]byte(fmt.Sprintf("chunk %d: %s\n", i, strings.Repeat("hi~", i)))) // nolint: errcheck
 			c.Flush()                                                                   // nolint: errcheck
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(time.Second)
 		}
 	})
 	h.Spin()

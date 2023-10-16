@@ -439,9 +439,11 @@ func TestDecompressGzipForClient(t *testing.T) {
 }
 
 func TestStreamGzip(t *testing.T) {
-	data := `chunk 0: 
-chunk 1: hi~
-chunk 2: hi~hi~
+	firstData := `chunk 0: 
+`
+	secondData := `chunk 1: hi~
+`
+	otherData := `chunk 2: hi~hi~
 chunk 3: hi~hi~hi~
 chunk 4: hi~hi~hi~hi~
 chunk 5: hi~hi~hi~hi~hi~
@@ -457,7 +459,7 @@ chunk 9: hi~hi~hi~hi~hi~hi~hi~hi~hi~
 		for i := 0; i < 10; i++ {
 			c.Write([]byte(fmt.Sprintf("chunk %d: %s\n", i, strings.Repeat("hi~", i)))) // nolint: errcheck
 			c.Flush()                                                                   // nolint: errcheck
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(time.Second)
 		}
 	})
 
@@ -484,14 +486,34 @@ chunk 9: hi~hi~hi~hi~hi~hi~hi~hi~hi~
 	}
 
 	bodyStream := resp.BodyStream()
-	compressedData, _ := ioutil.ReadAll(bodyStream)
-	gunzipBytes, err := compress.AppendGunzipBytes(nil, compressedData)
+
+	r, err := compress.AcquireGzipReader(bodyStream)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
+	}
+
+	firstChunk := make([]byte, 10)
+	_, err = r.Read(firstChunk)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	secondChunk := make([]byte, 13)
+	_, err = r.Read(secondChunk)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	otherChunks, _ := ioutil.ReadAll(r)
+
+	if r != nil {
+		compress.ReleaseGzipReader(r)
 	}
 
 	assert.Equal(t, "gzip", resp.Header.Get("Content-Encoding"))
 	assert.Equal(t, "chunked", resp.Header.Get("Transfer-Encoding"))
 	assert.Equal(t, "Accept-Encoding", resp.Header.Get("Vary"))
-	assert.Equal(t, data, string(gunzipBytes))
+	assert.Equal(t, firstData, string(firstChunk))
+	assert.Equal(t, secondData, string(secondChunk))
+	assert.Equal(t, otherData, string(otherChunks))
 }
