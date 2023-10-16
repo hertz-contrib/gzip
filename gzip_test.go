@@ -493,7 +493,11 @@ chunk 9: hi~hi~hi~hi~hi~hi~hi~hi~hi~
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
+	
 	firstChunkData, err := compress.AppendGunzipBytes(nil, firstChunk)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
 
 	// size after secondChunk compression
 	secondChunk := make([]byte, 71)
@@ -501,7 +505,11 @@ chunk 9: hi~hi~hi~hi~hi~hi~hi~hi~hi~
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
+
 	secondChunkData, err := compress.AppendGunzipBytes(nil, secondChunk)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
 
 	othersChunk, _ := ioutil.ReadAll(bodyStream)
 	othersChunkData, err := compress.AppendGunzipBytes(nil, othersChunk)
