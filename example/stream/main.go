@@ -88,33 +88,29 @@ func main() {
 
 	bodyStream := res.BodyStream()
 
-	// size after firstChunk compression
-	firstChunk := make([]byte, 34)
-	_, err = bodyStream.Read(firstChunk)
+	r, err := compress.AcquireGzipReader(bodyStream)
 	if err != nil {
 		panic(err)
 	}
 
-	firstChunkData, err := compress.AppendGunzipBytes(nil, firstChunk)
+	firstChunk := make([]byte, 10)
+	_, err = r.Read(firstChunk)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(fmt.Printf("%s", firstChunkData))
+	fmt.Println(fmt.Printf("%s", firstChunk))
 
-	// size after secondChunk compression
-	secondChunk := make([]byte, 71)
-	_, err = bodyStream.Read(secondChunk)
+	secondChunk := make([]byte, 13)
+	_, err = r.Read(secondChunk)
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(fmt.Printf("%s", secondChunk))
 
-	secondChunkData, _ := compress.AppendGunzipBytes(nil, secondChunk)
-	fmt.Println(fmt.Printf("%s", secondChunkData))
+	otherChunks, _ := ioutil.ReadAll(r)
+	fmt.Println(fmt.Printf("%s", otherChunks))
 
-	otherChunks, _ := ioutil.ReadAll(bodyStream)
-	otherChunksData, err := compress.AppendGunzipBytes(nil, otherChunks)
-	if err != nil {
-		panic(err)
+	if r != nil {
+		compress.ReleaseGzipReader(r)
 	}
-	fmt.Println(fmt.Printf("%s", otherChunksData))
 }

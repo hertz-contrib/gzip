@@ -487,37 +487,33 @@ chunk 9: hi~hi~hi~hi~hi~hi~hi~hi~hi~
 
 	bodyStream := resp.BodyStream()
 
-	// size after firstChunk compression
-	firstChunk := make([]byte, 34)
-	_, err = bodyStream.Read(firstChunk)
+	r, err := compress.AcquireGzipReader(bodyStream)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
 
-	firstChunkData, err := compress.AppendGunzipBytes(nil, firstChunk)
+	firstChunk := make([]byte, 10)
+	_, err = r.Read(firstChunk)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
 
-	// size after secondChunk compression
-	secondChunk := make([]byte, 71)
-	_, err = bodyStream.Read(secondChunk)
+	secondChunk := make([]byte, 13)
+	_, err = r.Read(secondChunk)
 	if err != nil {
 		t.Fatalf("Get: %v", err)
 	}
 
-	secondChunkData, _ := compress.AppendGunzipBytes(nil, secondChunk)
+	otherChunks, _ := ioutil.ReadAll(r)
 
-	othersChunk, _ := ioutil.ReadAll(bodyStream)
-	othersChunkData, err := compress.AppendGunzipBytes(nil, othersChunk)
-	if err != nil {
-		t.Fatalf("Get: %v", err)
+	if r != nil {
+		compress.ReleaseGzipReader(r)
 	}
 
 	assert.Equal(t, "gzip", resp.Header.Get("Content-Encoding"))
 	assert.Equal(t, "chunked", resp.Header.Get("Transfer-Encoding"))
 	assert.Equal(t, "Accept-Encoding", resp.Header.Get("Vary"))
-	assert.Equal(t, firstData, string(firstChunkData))
-	assert.Equal(t, secondData, string(secondChunkData))
-	assert.Equal(t, otherData, string(othersChunkData))
+	assert.Equal(t, firstData, string(firstChunk))
+	assert.Equal(t, secondData, string(secondChunk))
+	assert.Equal(t, otherData, string(otherChunks))
 }
