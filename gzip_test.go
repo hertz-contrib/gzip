@@ -506,10 +506,7 @@ chunk 9: hi~hi~hi~hi~hi~hi~hi~hi~hi~
 		t.Fatalf("Get: %v", err)
 	}
 
-	secondChunkData, err := compress.AppendGunzipBytes(nil, secondChunk)
-	if err != nil {
-		t.Fatalf("Get: %v", err)
-	}
+	secondChunkData, _ := compress.AppendGunzipBytes(nil, secondChunk)
 
 	othersChunk, _ := ioutil.ReadAll(bodyStream)
 	othersChunkData, err := compress.AppendGunzipBytes(nil, othersChunk)

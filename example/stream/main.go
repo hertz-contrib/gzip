@@ -108,10 +108,7 @@ func main() {
 		panic(err)
 	}
 
-	secondChunkData, err := compress.AppendGunzipBytes(nil, secondChunk)
-	if err != nil {
-		panic(err)
-	}
+	secondChunkData, _ := compress.AppendGunzipBytes(nil, secondChunk)
 	fmt.Println(fmt.Printf("%s", secondChunkData))
 
 	otherChunks, _ := ioutil.ReadAll(bodyStream)
