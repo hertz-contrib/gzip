@@ -443,7 +443,7 @@ func TestStreamGzip(t *testing.T) {
 `
 	secondData := `chunk 1: hi~
 `
-	otherDatas := `chunk 2: hi~hi~
+	otherData := `chunk 2: hi~hi~
 chunk 3: hi~hi~hi~
 chunk 4: hi~hi~hi~hi~
 chunk 5: hi~hi~hi~hi~hi~
@@ -491,7 +491,7 @@ chunk 9: hi~hi~hi~hi~hi~hi~hi~hi~hi~
 	firstChunk := make([]byte, 34)
 	_, err = bodyStream.Read(firstChunk)
 	if err != nil {
-		panic(err)
+		t.Fatalf("Get: %v", err)
 	}
 	firstChunkData, err := compress.AppendGunzipBytes(nil, firstChunk)
 
@@ -499,14 +499,14 @@ chunk 9: hi~hi~hi~hi~hi~hi~hi~hi~hi~
 	secondChunk := make([]byte, 71)
 	_, err = bodyStream.Read(secondChunk)
 	if err != nil {
-		panic(err)
+		t.Fatalf("Get: %v", err)
 	}
 	secondChunkData, err := compress.AppendGunzipBytes(nil, secondChunk)
 
 	othersChunk, _ := ioutil.ReadAll(bodyStream)
 	othersChunkData, err := compress.AppendGunzipBytes(nil, othersChunk)
 	if err != nil {
-		panic(err)
+		t.Fatalf("Get: %v", err)
 	}
 
 	assert.Equal(t, "gzip", resp.Header.Get("Content-Encoding"))
@@ -514,5 +514,5 @@ chunk 9: hi~hi~hi~hi~hi~hi~hi~hi~hi~
 	assert.Equal(t, "Accept-Encoding", resp.Header.Get("Vary"))
 	assert.Equal(t, firstData, string(firstChunkData))
 	assert.Equal(t, secondData, string(secondChunkData))
-	assert.Equal(t, otherDatas, string(othersChunkData))
+	assert.Equal(t, otherData, string(othersChunkData))
 }
