@@ -65,7 +65,7 @@ func main() {
 		for i := 0; i < 10; i++ {
 			c.Write([]byte(fmt.Sprintf("chunk %d: %s\n", i, strings.Repeat("hi~", i)))) // nolint: errcheck
 			c.Flush()                                                                   // nolint: errcheck
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(time.Second)
 		}
 	})
 	go h.Spin()
@@ -87,11 +87,29 @@ func main() {
 	}
 
 	bodyStream := res.BodyStream()
-	compressedData, _ := ioutil.ReadAll(bodyStream)
-	gunzipBytes, err := compress.AppendGunzipBytes(nil, compressedData)
+
+	// size after firstChunk compression
+	firstChunk := make([]byte, 34)
+	_, err = bodyStream.Read(firstChunk)
 	if err != nil {
 		panic(err)
 	}
+	firstChunkData, err := compress.AppendGunzipBytes(nil, firstChunk)
+	fmt.Println(fmt.Printf("%s", firstChunkData))
 
-	fmt.Println(fmt.Printf("%s", gunzipBytes))
+	// size after secondChunk compression
+	secondChunk := make([]byte, 71)
+	_, err = bodyStream.Read(secondChunk)
+	if err != nil {
+		panic(err)
+	}
+	secondChunkData, err := compress.AppendGunzipBytes(nil, secondChunk)
+	fmt.Println(fmt.Printf("%s", secondChunkData))
+
+	otherChunks, _ := ioutil.ReadAll(bodyStream)
+	otherChunksData, err := compress.AppendGunzipBytes(nil, otherChunks)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(fmt.Printf("%s", otherChunksData))
 }

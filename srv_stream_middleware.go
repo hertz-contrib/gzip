@@ -54,16 +54,6 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol/http1/resp"
 )
 
-var chunkReaderPool sync.Pool
-
-func init() {
-	chunkReaderPool = sync.Pool{
-		New: func() interface{} {
-			return &gzipChunkedWriter{}
-		},
-	}
-}
-
 type gzipChunkedWriter struct {
 	sync.Once
 	level          int
@@ -131,11 +121,10 @@ func (g *gzipChunkedWriter) release() {
 	g.w = nil
 	g.finalizeErr = nil
 	g.wroteHeader = false
-	chunkReaderPool.Put(g)
 }
 
 func newGzipChunkedWriter(r *protocol.Response, w network.Writer, level int) network.ExtWriter {
-	extWriter := chunkReaderPool.Get().(*gzipChunkedWriter)
+	extWriter := new(gzipChunkedWriter)
 	extWriter.r = r
 	extWriter.w = w
 	extWriter.Once = sync.Once{}
