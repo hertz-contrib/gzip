@@ -42,7 +42,6 @@ package gzip
 
 import (
 	"context"
-	"runtime"
 	"strings"
 	"sync"
 
@@ -113,23 +112,12 @@ func (g *gzipChunkedWriter) Finalize() error {
 	return g.finalizeErr
 }
 
-func (g *gzipChunkedWriter) release() {
-	g.level = 0
-	g.originalSize = 0
-	g.compressedSize = 0
-	g.r = nil
-	g.w = nil
-	g.finalizeErr = nil
-	g.wroteHeader = false
-}
-
 func newGzipChunkedWriter(r *protocol.Response, w network.Writer, level int) network.ExtWriter {
 	extWriter := new(gzipChunkedWriter)
 	extWriter.r = r
 	extWriter.w = w
 	extWriter.Once = sync.Once{}
 	extWriter.level = level
-	runtime.SetFinalizer(extWriter, (*gzipChunkedWriter).release)
 	return extWriter
 }
 
