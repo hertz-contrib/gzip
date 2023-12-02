@@ -102,6 +102,14 @@ func WithExcludedPathRegexes(args []string) Option {
 	}
 }
 
+// WithExcludedPathsRegexs customize path's regexes
+// NOTE: WithExcludedPathRegexs is exactly same as WithExcludedPathRegexes, this just for aligning with gin
+func WithExcludedPathsRegexs(args []string) Option {
+	return func(o *Options) {
+		o.ExcludedPathRegexes = NewExcludedPathRegexes(args)
+	}
+}
+
 func WithExcludedPaths(args []string) Option {
 	return func(o *Options) {
 		o.ExcludedPaths = NewExcludedPaths(args)
