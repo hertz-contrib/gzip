@@ -172,7 +172,7 @@ func TestDecompressGzip(t *testing.T) {
 	}
 	gz.Close()
 	router := route.NewEngine(config.NewOptions([]config.Option{}))
-	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressMiddleware)))
+	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
 	router.POST("/", func(ctx context.Context, c *app.RequestContext) {
 		if v := c.Request.Header.Get("Content-Encoding"); v != "" {
 			t.Errorf("unexpected `Content-Encoding`: %s header", v)
@@ -196,7 +196,7 @@ func TestDecompressGzip(t *testing.T) {
 
 func TestDecompressGzipWithEmptyBody(t *testing.T) {
 	router := route.NewEngine(config.NewOptions([]config.Option{}))
-	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressMiddleware)))
+	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
 	router.POST("/", func(ctx context.Context, c *app.RequestContext) {
 		c.String(200, "ok")
 	})
@@ -213,7 +213,7 @@ func TestDecompressGzipWithEmptyBody(t *testing.T) {
 
 func TestDecompressGzipWithSkipFunc(t *testing.T) {
 	router := route.NewEngine(config.NewOptions([]config.Option{}))
-	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressMiddleware)))
+	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
 	router.POST("/", func(ctx context.Context, c *app.RequestContext) {
 		c.SetStatusCode(200)
 	})
@@ -230,7 +230,7 @@ func TestDecompressGzipWithSkipFunc(t *testing.T) {
 
 func TestDecompressGzipWithIncorrectData(t *testing.T) {
 	router := route.NewEngine(config.NewOptions([]config.Option{}))
-	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressMiddleware)))
+	router.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
 	router.POST("/", func(ctx context.Context, c *app.RequestContext) {
 		c.String(200, "ok")
 	})
@@ -409,7 +409,7 @@ func TestDecompressGzipForClient(t *testing.T) {
 		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
 		c.String(200, testResponse)
 	})
-	h.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressMiddleware)))
+	h.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
 	go h.Spin()
 
 	time.Sleep(time.Second)

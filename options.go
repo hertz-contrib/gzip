@@ -191,7 +191,7 @@ func (e ExcludedPaths) Contains(requestURI string) bool {
 	return false
 }
 
-func DefaultDecompressMiddleware(ctx context.Context, c *app.RequestContext) {
+func DefaultDecompressHandle(ctx context.Context, c *app.RequestContext) {
 	if len(c.Request.Body()) <= 0 {
 		return
 	}
