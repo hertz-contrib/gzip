@@ -46,11 +46,11 @@ import (
 	"sync"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/common/compress"
 	"github.com/cloudwego/hertz/pkg/network"
 	"github.com/cloudwego/hertz/pkg/protocol"
 	"github.com/cloudwego/hertz/pkg/protocol/http1/ext"
 	"github.com/cloudwego/hertz/pkg/protocol/http1/resp"
+	"github.com/hertz-contrib/gzip/compress"
 )
 
 type gzipChunkedWriter struct {
