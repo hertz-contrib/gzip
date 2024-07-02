@@ -41,6 +41,7 @@
 package gzip
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"regexp"
@@ -216,7 +217,8 @@ func DefaultDecompressMiddlewareForClient(next client.Endpoint) client.Endpoint 
 		}
 		resp.Header.DelBytes([]byte("Content-Encoding"))
 		resp.Header.DelBytes([]byte("Content-Length"))
-		resp.SetBody(gunzipBytes)
-		return next(ctx, req, resp)
+		resp.Header.DelBytes([]byte("Vary"))
+		resp.SetBodyStream(bytes.NewBuffer(gunzipBytes), len(gunzipBytes))
+		return nil
 	}
 }

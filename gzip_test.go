@@ -405,11 +405,12 @@ func TestNoGzipForClient(t *testing.T) {
 func TestDecompressGzipForClient(t *testing.T) {
 	h := server.Default(server.WithHostPorts("127.0.0.1:2338"))
 
+	h.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
 	h.GET("/", func(ctx context.Context, c *app.RequestContext) {
 		c.Header("Content-Length", strconv.Itoa(len(testResponse)))
 		c.String(200, testResponse)
 	})
-	h.Use(Gzip(DefaultCompression, WithDecompressFn(DefaultDecompressHandle)))
+
 	go h.Spin()
 
 	time.Sleep(time.Second)
@@ -425,6 +426,7 @@ func TestDecompressGzipForClient(t *testing.T) {
 
 	req.SetBodyString("bar")
 	req.SetRequestURI("http://127.0.0.1:2338/")
+	req.SetHeader("Accept-Encoding", "gzip")
 
 	err = cli.Do(context.Background(), req, res)
 	if err != nil {
