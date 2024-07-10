@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 CloudWeGo Authors
+ * Copyright 2024 CloudWeGo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,10 +82,14 @@ func (g *gzipClientMiddleware) ClientMiddleware(next client.Endpoint) client.End
 
 		err = next(ctx, req, resp)
 		if err != nil {
-			return
+			return err
 		}
 		if fn := g.DecompressFnForClient; fn != nil && strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
-			fn(next)
+			f := fn(next)
+			err = f(ctx, req, resp)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}

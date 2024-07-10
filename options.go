@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 CloudWeGo Authors
+ * Copyright 2024 CloudWeGo Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@
 package gzip
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"regexp"
@@ -216,7 +217,8 @@ func DefaultDecompressMiddlewareForClient(next client.Endpoint) client.Endpoint 
 		}
 		resp.Header.DelBytes([]byte("Content-Encoding"))
 		resp.Header.DelBytes([]byte("Content-Length"))
-		resp.SetBody(gunzipBytes)
-		return next(ctx, req, resp)
+		resp.Header.DelBytes([]byte("Vary"))
+		resp.SetBodyStream(bytes.NewBuffer(gunzipBytes), len(gunzipBytes))
+		return nil
 	}
 }
