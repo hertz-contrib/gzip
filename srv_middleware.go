@@ -77,9 +77,10 @@ func (g *gzipSrvMiddleware) SrvMiddleware(ctx context.Context, c *app.RequestCon
 
 	c.Next(ctx)
 
-	c.Header("Content-Encoding", "gzip")
-	c.Header("Vary", "Accept-Encoding")
 	if len(c.Response.Body()) > 0 {
+		c.Header("Content-Encoding", "gzip")
+		c.Header("Vary", "Accept-Encoding")
+		
 		gzipBytes := compress.AppendGzipBytesLevel(nil, c.Response.Body(), g.level)
 		c.Response.SetBodyStream(bytes.NewBuffer(gzipBytes), len(gzipBytes))
 	}
