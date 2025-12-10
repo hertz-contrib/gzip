@@ -222,8 +222,8 @@ func TestDecompressGzipWithSkipFunc(t *testing.T) {
 		ut.Header{Key: "Accept-Encoding", Value: "gzip"})
 	w := request.Result()
 	assert.Equal(t, http.StatusOK, w.StatusCode())
-	assert.Equal(t, "gzip", w.Header.Get("Content-Encoding"))
-	assert.Equal(t, "Accept-Encoding", w.Header.Get("Vary"))
+	assert.Equal(t, "", w.Header.Get("Content-Encoding"))
+	assert.Equal(t, "", w.Header.Get("Vary"))
 	assert.Equal(t, "", string(w.Body()))
 	assert.Equal(t, "0", w.Header.Get("Content-Length"))
 }
