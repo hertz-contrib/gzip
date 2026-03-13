@@ -123,6 +123,32 @@ func main() {
 }
 ```
 
+解压缩请求
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"time"
+	
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/hertz-contrib/gzip"
+	
+)
+
+func main() {
+	h := server.Default(server.WithHostPorts(":8080"))
+	h.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
+	h.GET("/ping", func(ctx context.Context, c *app.RequestContext) {
+		c.String(http.StatusOK, "pong "+fmt.Sprint(time.Now().Unix()))
+	})
+	h.Spin()
+}
+```
+
 ### 服务端-流式压缩
 
 服务端先将数据压缩再流式写出去
